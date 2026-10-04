@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+# generated results (don't commit big files)
+outputs/
+*.mp4
+*.avi
+*.mov
+!samples/.gitkeep
