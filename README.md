@@ -20,9 +20,9 @@ python main.py
 ## Team
 | Member | Name | GitHub | Module |
 |---|---|---|---|
-| 1 | | | Data + live pipeline (`frames.py`) |
-| 2 | | | SVD + rank-k (`svd_tools.py`) |
-| 3 | | | Robust PCA (`rpca.py`) |
-| 4 | | | Masks + UI + integration (`masks.py`, `app.py`) |
+| 1 | Rahul P| | Data + live pipeline (`frames.py`) |
+| 2 | Rohith M| | SVD + rank-k (`svd_tools.py`) |
+| 3 | Sambhram Laxman Sattigeri| | Robust PCA (`rpca.py`) |
+| 4 | S Banuteja Reddy| | Masks + UI + integration (`masks.py`, `app.py`) |
 
 See `CONTRIBUTING.md` for the workflow.
