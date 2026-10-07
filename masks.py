@@ -6,6 +6,14 @@ import numpy as np
 from collections import deque
 
 
+def gaussian_kernel(size=5, sigma=1.0):
+    """Outer product of a normalised 1-D Gaussian with itself."""
+    ax = np.arange(-(size // 2), size // 2 + 1)
+    xx, yy = np.meshgrid(ax, ax)
+    kernel = np.exp(-(xx**2 + yy**2) / (2 * sigma**2))
+    return kernel / np.sum(kernel)
+
+
 def convolve2d(image, kernel):
     """Pad, slide window, multiply by FLIPPED kernel, sum. Same output size (zero padding)."""
     image = np.asarray(image, dtype=float)
