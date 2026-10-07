@@ -1,7 +1,5 @@
 """MEMBER 1 - Video generation and matrix reshaping utilities."""
 import numpy as np
-
-
 def synthetic_video(num_frames=30, height=64, width=64):
     """Generates a synthetic video sequence (static background + moving object) and ground truth."""
     # Static background (e.g., a soft gradient or random texture)
