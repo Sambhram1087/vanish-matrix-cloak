@@ -118,8 +118,20 @@ def _drop_small_blobs(mask, min_area):
     return out
 
 
-def clean_mask(S_frame):
-    """|S| -> blur -> threshold -> opening -> closing -> drop tiny blobs -> dilate."""
+def clean_mask(S_frame, mad_k: float = 3.0, peak_frac: float = 0.05,
+               min_area: int | None = None, dilate_px: int = 5):
+    """|S| -> blur -> threshold -> opening -> closing -> drop tiny blobs -> dilate.
+
+    Parameters
+    ----------
+    S_frame   : 2-D (or 3-D colour) sparse residual frame from RPCA.
+    mad_k     : noise-floor multiplier.  threshold >= median + mad_k * MAD.
+                Lower = more sensitive (detects more foreground).
+                Default 3.0; original code used 8.0 (too conservative for real video).
+    peak_frac : threshold >= peak_frac * max(blurred).  Lower = more foreground.
+    min_area  : minimum blob size in pixels to keep.  None = auto (0.05% of frame).
+    dilate_px : final dilation to cover object edges.
+    """
     S = np.abs(np.asarray(S_frame, dtype=float))
     if S.ndim == 3:                          # colour frame: combine channels
         S = S.mean(axis=2)
@@ -132,11 +144,10 @@ def clean_mask(S_frame):
     r = k.shape[0] // 2
     blurred = convolve2d(np.pad(S, r, mode="edge"), k)[r:-r, r:-r]
 
-    # threshold: Otsu, but never below a noise floor (median + 8*MAD) or 10% of the peak,
-    # so a frame with no person (pure noise) gives an empty mask instead of a random one
+    # threshold: Otsu, but never below a noise floor or peak_frac of the peak
     med = np.median(blurred)
     mad = 1.4826 * np.median(np.abs(blurred - med))
-    thr = max(otsu_threshold(blurred), med + 8 * mad, 0.1 * blurred.max())
+    thr = max(otsu_threshold(blurred), med + mad_k * mad, peak_frac * blurred.max())
     mask = blurred > thr
 
     # opening (erode -> dilate) removes specks, closing (dilate -> erode) fills holes
@@ -144,11 +155,11 @@ def clean_mask(S_frame):
     mask = erode(dilate(mask, 5), 5)
 
     # drop tiny blobs
-    min_area = max(10, int(0.0005 * H * W))
-    mask = _drop_small_blobs(mask, min_area)
+    _min_area = min_area if min_area is not None else max(10, int(0.0005 * H * W))
+    mask = _drop_small_blobs(mask, _min_area)
 
     # grow slightly so the person's edges are fully covered
-    return dilate(mask, 5).astype(bool)
+    return dilate(mask, dilate_px).astype(bool)
 
 
 def composite(frame, background, mask):
