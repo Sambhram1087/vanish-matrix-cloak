@@ -109,6 +109,23 @@ details{background:#ffffff!important;border:1px solid var(--border-light)!import
 
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#f1f5f9}::-webkit-scrollbar-thumb{background:rgba(79,70,229,.3);border-radius:999px}
 
+/* ─── Sidebar: force all text dark on white background ─── */
+[data-testid="stSidebar"] *{color:#0f172a !important}
+[data-testid="stSidebar"] label,[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] .stMarkdown h3,[data-testid="stSidebar"] .stMarkdown strong,
+[data-testid="stSidebar"] .stMarkdown b{color:#0f172a !important}
+[data-testid="stSidebar"] [data-testid="stSlider"] label,
+[data-testid="stSidebar"] [data-testid="stSelectSlider"] label,
+[data-testid="stSidebar"] [data-testid="stRadio"] label,
+[data-testid="stSidebar"] [data-testid="stCheckbox"] label,
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label{color:#0f172a !important;font-weight:500}
+[data-testid="stSidebar"] [role="radiogroup"] label{color:#1e293b !important}
+[data-testid="stSidebar"] small,[data-testid="stSidebar"] small *{color:#475569 !important}
+[data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stTickBarMin"],
+[data-testid="stSidebar"] [data-testid="stSlider"] [data-testid="stTickBarMax"]{color:#64748b !important}
+[data-testid="stSidebar"] hr{border-color:#e2e8f0 !important}
+[data-testid="stSidebar"] [data-baseweb="select"] *{color:#0f172a !important}
+
 #MainMenu,footer{visibility:hidden}
 </style>
 """, unsafe_allow_html=True)
@@ -186,7 +203,7 @@ with st.sidebar:
 # ─── Tips banner ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="warn-card">
-    <b style="color:#fbbf24">💡 For best invisibility-cloak results:</b>
+    <b style="color:#92400e">💡 For best invisibility-cloak results:</b>
     <ul>
         <li>Keep your camera <b>completely still</b> — any camera shake breaks the background estimation</li>
         <li>Record 1–2 seconds of <b>empty background</b> before moving your hand into frame</li>
@@ -259,29 +276,22 @@ def apply_colormap(frame_abs: np.ndarray, cmap_name: str) -> np.ndarray:
     return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
 
 
-def frames_to_mp4_bytes(rgb_frames, fps: float = 10.0) -> bytes:
-    """Encode a list of (H, W, 3) RGB uint8 frames to an MP4 video."""
-    import tempfile
-    import cv2
-    
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
-        tmp_path = tmp.name
-        
-    H, W, _ = rgb_frames[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(tmp_path, fourcc, fps, (W, H))
-    
-    for frame in rgb_frames:
-        # OpenCV VideoWriter expects BGR
-        out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        
-    out.release()
-    
-    with open(tmp_path, 'rb') as f:
-        data = f.read()
-        
-    os.unlink(tmp_path)
-    return data
+def frames_to_gif_bytes(rgb_frames, fps: float = 10.0) -> bytes:
+    """Encode a list of (H, W, 3) RGB uint8 frames to an animated GIF using Pillow.
+    GIFs are universally supported in browsers via st.image().
+    """
+    from PIL import Image
+    import io
+
+    duration_ms = int(1000 / max(fps, 1))
+    pil_frames = [Image.fromarray(f.astype(np.uint8)) for f in rgb_frames]
+    buf = io.BytesIO()
+    pil_frames[0].save(
+        buf, format="GIF", save_all=True,
+        append_images=pil_frames[1:],
+        loop=0, duration=duration_ms, optimize=False
+    )
+    return buf.getvalue()
 
 
 def gray_to_rgb(arr: np.ndarray) -> np.ndarray:
@@ -436,19 +446,19 @@ for col, (label, img) in zip(cols, panel_data):
 st.markdown("#### 🎬 Animated preview")
 
 anim_labels = ["Original", "Background", "Foreground", "Composite"]
-with st.spinner("Encoding MP4 videos …"):
+with st.spinner("Encoding animated previews …"):
     orig_rgb = [gray_to_rgb(frames[t].astype(np.uint8)) for t in range(T)]
     bg_rgb   = [gray_to_rgb(np.clip(L_fr[t], 0, 255).astype(np.uint8)) for t in range(T)]
     fg_rgb   = [apply_colormap(np.abs(S_fr[t]), colormap) for t in range(T)]
     out_rgb  = [gray_to_rgb(np.clip(out[t], 0, 255).astype(np.uint8)) for t in range(T)]
-    vid_fps  = min(fps, 15.0)
-    videos = [frames_to_mp4_bytes(seq, vid_fps) for seq in [orig_rgb, bg_rgb, fg_rgb, out_rgb]]
+    gif_fps  = min(fps, 12.0)
+    gifs = [frames_to_gif_bytes(seq, gif_fps) for seq in [orig_rgb, bg_rgb, fg_rgb, out_rgb]]
 
 acols = st.columns(4)
-for col, label, vid in zip(acols, anim_labels, videos):
+for col, label, gif in zip(acols, anim_labels, gifs):
     with col:
         st.markdown(f'<div class="panel-label">{label}</div>', unsafe_allow_html=True)
-        st.video(vid)
+        st.image(gif, use_container_width=True)
 
 # ─── RPCA convergence ────────────────────────────────────────────────────────
 with st.expander("📈 RPCA convergence history", expanded=False):
@@ -468,8 +478,8 @@ with st.expander("📈 RPCA convergence history", expanded=False):
 # ─── Downloads ───────────────────────────────────────────────────────────────
 st.markdown("#### 💾 Downloads")
 dcols = st.columns(4)
-fnames = ["original.mp4", "background.mp4", "foreground.mp4", "composite.mp4"]
-for col, label, vid, fname in zip(dcols, anim_labels, videos, fnames):
+fnames = ["original.gif", "background.gif", "foreground.gif", "composite.gif"]
+for col, label, gif, fname in zip(dcols, anim_labels, gifs, fnames):
     with col:
-        st.download_button(f"⬇ {label}", data=vid, file_name=fname,
-                           mime="video/mp4", use_container_width=True)
+        st.download_button(f"⬇ {label}", data=gif, file_name=fname,
+                           mime="image/gif", use_container_width=True)
