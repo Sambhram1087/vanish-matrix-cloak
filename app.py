@@ -294,6 +294,31 @@ def frames_to_gif_bytes(rgb_frames, fps: float = 10.0) -> bytes:
     return buf.getvalue()
 
 
+def frames_to_mp4_bytes(rgb_frames, fps: float = 10.0) -> bytes:
+    """Encode a list of (H, W, 3) RGB uint8 frames to an MP4 video."""
+    import tempfile
+    import cv2
+    import os
+    
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+        tmp_path = tmp.name
+        
+    H, W, _ = rgb_frames[0].shape
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(tmp_path, fourcc, fps, (W, H))
+    
+    for frame in rgb_frames:
+        out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        
+    out.release()
+    
+    with open(tmp_path, 'rb') as f:
+        data = f.read()
+        
+    os.unlink(tmp_path)
+    return data
+
+
 def gray_to_rgb(arr: np.ndarray) -> np.ndarray:
     return cv2.cvtColor(np.clip(arr, 0, 255).astype(np.uint8), cv2.COLOR_GRAY2RGB)
 
@@ -477,9 +502,13 @@ with st.expander("📈 RPCA convergence history", expanded=False):
 
 # ─── Downloads ───────────────────────────────────────────────────────────────
 st.markdown("#### 💾 Downloads")
+with st.spinner("Preparing MP4 downloads ..."):
+    vid_fps = min(fps, 30.0)
+    mp4s = [frames_to_mp4_bytes(seq, vid_fps) for seq in [orig_rgb, bg_rgb, fg_rgb, out_rgb]]
+
 dcols = st.columns(4)
-fnames = ["original.gif", "background.gif", "foreground.gif", "composite.gif"]
-for col, label, gif, fname in zip(dcols, anim_labels, gifs, fnames):
+fnames = ["original.mp4", "background.mp4", "foreground.mp4", "composite.mp4"]
+for col, label, mp4, fname in zip(dcols, anim_labels, mp4s, fnames):
     with col:
-        st.download_button(f"⬇ {label}", data=gif, file_name=fname,
-                           mime="image/gif", use_container_width=True)
+        st.download_button(f"⬇ {label}", data=mp4, file_name=fname,
+                           mime="video/mp4", use_container_width=True)
