@@ -18,7 +18,8 @@ Video frames are stacked as columns of a matrix **M** and decomposed into **M = 
 6. [Streamlit App](#streamlit-app)
 7. [Pipeline Parameters](#pipeline-parameters)
 8. [Troubleshooting](#troubleshooting)
-9. [Team](#team)
+9. [Samples](#samples)
+10. [Team](#team)
 
 ---
 
@@ -143,14 +144,22 @@ out[t] = (1 − α) · frame[t]  +  α · L[t]
 
 ```
 vanish-matrix-cloak/
-├── app.py            # Streamlit UI — upload, controls, results, animated preview, downloads
-├── frames.py         # Video ↔ matrix reshaping + synthetic video generator
-├── rpca.py           # Robust PCA (IALM): svt, soft_threshold, rpca_ialm
-├── svd_tools.py      # From-scratch SVD, rank-k approx, randomised SVD, PSNR table
-├── masks.py          # Mask pipeline: Gaussian, convolve2d, erode/dilate, Otsu, clean_mask, composite
-├── main.py           # CLI entry point (demo on synthetic video)
-├── tests/            # pytest test suite
-├── samples/          # Sample input/output videos
+├── app.py                # Streamlit UI — upload, controls, results, animated preview, downloads
+├── frames.py             # Video ↔ matrix reshaping + synthetic video generator
+├── rpca.py               # Robust PCA (IALM): svt, soft_threshold, rpca_ialm
+├── svd_tools.py          # From-scratch SVD, rank-k approx, randomised SVD, PSNR table
+├── masks.py              # Mask pipeline: Gaussian, convolve2d, erode/dilate, Otsu, clean_mask, composite
+├── main.py               # CLI entry point (demo on synthetic video)
+├── generate_samples.py   # Generates all sample images/GIF in samples/
+├── tests/
+│   ├── test_contract.py  # Shape/contract tests (must always pass on main)
+│   └── test_pipeline.py  # Extended: numerical, edge-case & integration tests (33 tests)
+├── samples/
+│   ├── pipeline_output.png      # 4-panel pipeline output (synthetic video)
+│   ├── rpca_convergence.png     # RPCA convergence: error, rank, sparsity
+│   ├── mask_evolution.png       # Binary mask across frames
+│   ├── svd_spectrum.png         # Singular value spectrum + cumulative energy
+│   └── composite_preview.gif   # Animated composite output
 └── requirements.txt
 ```
 
@@ -227,7 +236,20 @@ pip install -r requirements.txt
 ### Run Tests
 
 ```bash
+# Quick contract checks
+python -m pytest tests/test_contract.py -q
+
+# Full suite (33 tests — numerical, edge cases, integration)
+python -m pytest tests/test_pipeline.py -v
+
+# All tests
 python -m pytest -q
+```
+
+### Regenerate Sample Images
+
+```bash
+python generate_samples.py
 ```
 
 ### CLI Demo (synthetic video)
@@ -302,6 +324,42 @@ After uploading a video and clicking **▶ Run Pipeline**, the app shows:
 | Background poorly estimated | Increase **Max frames** to 80–120; record 1–2 s of empty background first |
 | Processing too slow | Lower **Resize height** to 64–80 px; reduce **Max frames** |
 | Mask coverage near zero | Lower `mad_k` below 1.5; switch to Median or Union mode |
+
+---
+
+## Samples
+
+All samples below are generated automatically from a synthetic video (static gradient background + moving white square) using `generate_samples.py`. They demonstrate the full pipeline output without needing a real video.
+
+### Pipeline Output — 4-Panel View
+
+![Pipeline output: Original / Background (L) / Foreground |S| / Composite](samples/pipeline_output.png)
+
+> Left to right: **Original** frame · **Background L** (low-rank) · **Foreground |S|** (sparse, hot colourmap) · **Composite** (hand vanished).
+
+### RPCA Convergence History
+
+![RPCA convergence: relative error, rank of L, sparsity of S across IALM iterations](samples/rpca_convergence.png)
+
+> The IALM solver converges in ~10–30 iterations for typical video. Rank of L settles to 1–2 for a static background; sparsity of S reflects the fraction of moving-foreground pixels.
+
+### Mask Evolution Across Frames
+
+![Binary foreground mask evolution across all frames](samples/mask_evolution.png)
+
+> Top row: original frames · Bottom row: corresponding binary foreground masks. The mask tracks the moving object through Gaussian blur → Otsu threshold → morphological opening/closing → dilation.
+
+### SVD Singular Value Analysis
+
+![SVD spectrum and cumulative energy plot](samples/svd_spectrum.png)
+
+> Left: singular value spectrum (σ₁ dominates — low-rank background). Right: cumulative energy — a static background needs only rank-1 to capture >99% of energy.
+
+### Animated Composite Preview
+
+![Animated GIF of composite invisibility-cloak output](samples/composite_preview.gif)
+
+> The moving object is erased frame-by-frame and replaced with the recovered background.
 
 ---
 
