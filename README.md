@@ -2,6 +2,8 @@
 
 > **An invisibility-cloak effect powered entirely by linear algebra — no deep learning, no background subtraction library.**
 
+🚀 **[Live Demo Available Here](https://vanish-matrix-cloak-9sreajiuldfaosnv3856xk.streamlit.app/)**
+
 Mini project for **UE25MA242A — Mathematical Foundation for AI & Data Science (MFAD 2026)**.
 
 Video frames are stacked as columns of a matrix **M** and decomposed into **M = L + S** (low-rank background + sparse moving foreground) using SVD and Robust PCA. The foreground is then masked and replaced with the recovered background, producing an invisibility-cloak effect.
@@ -267,6 +269,18 @@ streamlit run app.py
 ---
 
 ## Streamlit App
+
+**🚀 Live Demo:** [https://vanish-matrix-cloak-9sreajiuldfaosnv3856xk.streamlit.app/](https://vanish-matrix-cloak-9sreajiuldfaosnv3856xk.streamlit.app/)
+
+The Streamlit app provides a full, interactive UI for the pipeline right in your browser.
+
+### Key Features
+- **Video upload**: Supports MP4, AVI, MOV, MKV, WebM, FLV, 3GP.
+- **Tunable Parameters**: Adjust mask sensitivity, iteration counts, and RPCA tolerance on the fly using the sidebar.
+- **Frame Explorer**: Slider-driven per-frame view of all processing stages.
+- **Animated Previews**: Encodes the final output to animated GIFs for universal browser playback.
+- **Convergence Charts**: Real-time plotting of RPCA error, rank, and sparsity.
+- **One-click Downloads**: Export the Original, Background, Foreground, and Composite videos.
 
 After uploading a video and clicking **▶ Run Pipeline**, the app shows:
 
